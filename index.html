@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>Контроль веса — Telegram Mini App</title>
+    <title>Тест Худеем — уведомления</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -23,14 +22,6 @@
             margin-bottom: 20px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.3);
         }
-        .header-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 8px;
-        }
         h1 {
             font-size: 28px;
             font-weight: 600;
@@ -38,37 +29,8 @@
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            margin: 0;
+            margin-bottom: 8px;
         }
-        .toggle-switch {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background-color: #2c2c34;
-            padding: 6px 12px;
-            border-radius: 40px;
-        }
-        .toggle-switch span {
-            font-size: 14px;
-            color: #cdcddf;
-        }
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 48px;
-            height: 24px;
-        }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #3a3a44; transition: 0.2s; border-radius: 24px;
-        }
-        .slider:before {
-            position: absolute; content: ""; height: 20px; width: 20px; left: 2px; bottom: 2px;
-            background-color: white; transition: 0.2s; border-radius: 50%;
-        }
-        input:checked + .slider { background-color: #6c5ce7; }
-        input:checked + .slider:before { transform: translateX(24px); }
         .sub {
             color: #a0a0b0;
             font-size: 14px;
@@ -84,7 +46,7 @@
             margin-bottom: 8px;
             color: #cdcddf;
         }
-        input, select {
+        input {
             width: 100%;
             background-color: #2c2c34;
             border: 1px solid #3a3a44;
@@ -94,8 +56,6 @@
             color: #ffffff;
             outline: none;
         }
-        input:focus, select:focus { border-color: #6c5ce7; box-shadow: 0 0 0 2px rgba(108,92,231,0.3); }
-        .error-msg { color: #ff6b6b; font-size: 13px; margin-top: 6px; padding-left: 8px; }
         .btn-group, .flex-buttons { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
         button {
             background-color: #2c2c34;
@@ -108,45 +68,13 @@
             cursor: pointer;
             flex: 1 0 auto;
         }
-        .btn-primary { background-color: #6c5ce7; color: white; box-shadow: 0 2px 6px rgba(108,92,231,0.3); }
-        .btn-primary:hover { background-color: #5f4fdb; transform: scale(0.98); }
+        .btn-primary { background-color: #6c5ce7; color: white; }
         .btn-secondary { background-color: #2c2c34; border: 1px solid #4a4a56; }
-        .btn-secondary:hover { background-color: #3a3a44; }
-        .btn-danger { background-color: #3a2a2f; border: 1px solid #8a4a5a; color: #ffaaaa; }
-        .stats-container {
-            background-color: #1e1e24;
-            border-radius: 24px;
-            padding: 20px;
-            margin-top: 8px;
-        }
-        .stats-title { font-size: 20px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
-        .no-data-message {
-            background-color: #2a2a32;
-            border-radius: 20px;
-            padding: 32px 20px;
-            text-align: center;
-            color: #aaaaaa;
-        }
-        .weight-table {
+        .test-btn {
+            background-color: #6c5ce7;
             width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 28px;
-            border-radius: 18px;
-            overflow: hidden;
-            font-size: 14px;
+            margin-top: 16px;
         }
-        .weight-table th, .weight-table td {
-            text-align: left;
-            padding: 10px 8px;
-            border-bottom: 1px solid #2e2e38;
-        }
-        .weight-table th {
-            background-color: #2a2a32;
-            color: #cbcbff;
-            font-size: 14px;
-        }
-        .chart-container { margin-top: 12px; height: 260px; width: 100%; }
-        .girth-chart-container { margin-top: 28px; height: 260px; width: 100%; }
         .toast-notification {
             position: fixed;
             bottom: 30px;
@@ -159,19 +87,14 @@
             color: #f0f0f0;
             font-weight: 500;
             font-size: 15px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
             z-index: 1000;
             opacity: 0;
-            transition: opacity 0.2s ease, transform 0.2s ease;
+            transition: opacity 0.2s ease;
             pointer-events: none;
             white-space: nowrap;
         }
         @media (max-width: 500px) {
-            .toast-notification { white-space: normal; text-align: center; max-width: 85%; border-radius: 28px; }
-            body { padding: 16px 12px 32px; }
-            button { padding: 10px 14px; }
-            .header-row { flex-direction: column; align-items: flex-start; }
-            .weight-table th, .weight-table td { font-size: 12px; padding: 6px 4px; }
+            .toast-notification { white-space: normal; text-align: center; max-width: 85%; }
         }
         .collapsible-header {
             display: flex;
@@ -190,7 +113,6 @@
         .arrow {
             font-size: 24px;
             transition: transform 0.2s ease;
-            user-select: none;
         }
         .arrow.up { transform: rotate(180deg); }
         .collapsible-content {
@@ -212,39 +134,37 @@
             flex-wrap: wrap;
             gap: 12px;
         }
-        .settings-row label { margin-bottom: 0; }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #3a3a44; transition: 0.2s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 20px; width: 20px; left: 2px; bottom: 2px;
+            background-color: white; transition: 0.2s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #6c5ce7; }
+        input:checked + .slider:before { transform: translateX(24px); }
         .time-select, .weekday-select {
             background-color: #2c2c34;
             border-radius: 16px;
             padding: 10px;
-        }
-        .girth-field { transition: all 0.2s ease; }
-        .test-btn {
-            display: block;
-            width: 100%;
-            background-color: #6c5ce7;
-            margin-top: 16px;
-            border-radius: 40px;
-            padding: 12px;
-            text-align: center;
-            font-weight: bold;
+            border: 1px solid #3a3a44;
+            color: white;
         }
     </style>
 </head>
 <body>
 <div class="app-container">
     <div class="card">
-        <div class="header-row">
-            <h1>⚖️ Контроль веса</h1>
-            <div class="toggle-switch">
-                <span>Замер охвата</span>
-                <label class="switch">
-                    <input type="checkbox" id="girthToggle">
-                    <span class="slider"></span>
-                </label>
-            </div>
-        </div>
-        <div class="sub">Записывайте прогресс — стройте график</div>
+        <h1>🧪 Тест Худеем</h1>
+        <div class="sub">Проверка уведомлений (только тест)</div>
         <div class="form-group">
             <label>📆 Дата</label>
             <input type="date" id="dateInput">
@@ -254,19 +174,14 @@
             <input type="number" id="weightInput" step="0.1" placeholder="например, 72.5">
             <div id="weightError" class="error-msg"></div>
         </div>
-        <div class="form-group girth-field" id="girthGroup" style="display: none;">
-            <label>📏 Охват (см)</label>
-            <input type="number" id="girthInput" step="0.1" placeholder="например, 80.0">
-            <div id="girthError" class="error-msg"></div>
-        </div>
         <div class="btn-group">
-            <button id="saveBtn" class="btn-primary">💾 Сохранить вес</button>
+            <button id="saveBtn" class="btn-primary">💾 Сохранить вес (тест)</button>
         </div>
     </div>
 
     <div class="card">
         <div class="collapsible-header" id="notifHeader">
-            <div class="title"><span>🔔</span> Настройка уведомлений</div>
+            <div class="title"><span>🔔</span> Настройка уведомлений (тест)</div>
             <span class="arrow" id="headerArrow">▼</span>
         </div>
         <div class="collapsible-content" id="notifContent">
@@ -298,57 +213,28 @@
         </div>
     </div>
 
-    <div class="flex-buttons">
-        <button id="showStatsBtn" class="btn-secondary">📊 Показать статистику</button>
-        <button id="resetDataBtn" class="btn-danger">🗑️ Сбросить все данные</button>
-    </div>
-
-    <div id="statsBlock" class="stats-container" style="display: none;">
-        <div class="stats-title">📈 История и графики</div>
-        <div id="statsContent"></div>
-    </div>
-
-    <!-- ТЕСТОВАЯ КНОПКА -->
-    <div class="card" style="margin-top: 20px;">
-        <button id="testSendBtn" class="test-btn">🔍 Тест отправки настроек (10:17 ежедневно)</button>
-        <div style="font-size: 12px; color: #aaa; margin-top: 8px; text-align: center;">
-            Нажмите, чтобы проверить отправку на сервер. Результат появится во всплывающем окне.
-        </div>
-    </div>
+    <button id="testSendBtn" class="test-btn">🔍 Тест отправки настроек (10:17 ежедневно)</button>
 </div>
 
 <script>
-    // ---------- Конфигурация ----------
     const BACKEND_URL = "https://test-hudeem-bot.onrender.com";
-    const STORAGE_KEY = "weightLog";
-    const NOTIF_KEY = "notifSettings";
-    const GIRTH_MODE_KEY = "girthMode";
+    const STORAGE_KEY = "weightLogTest";
+    const NOTIF_KEY = "notifSettingsTest";
 
-    let weightChart = null;
-    let girthChart = null;
     let currentWeightLog = [];
     let notifSettings = { dailyEnabled: false, dailyTime: "19:00", weeklyEnabled: false, weeklyDay: 6, weeklyTime: "19:00" };
-    let girthMode = false;
 
-    // DOM элементы
     const dateInput = document.getElementById('dateInput');
     const weightInput = document.getElementById('weightInput');
     const weightErrorDiv = document.getElementById('weightError');
-    const girthInput = document.getElementById('girthInput');
-    const girthErrorDiv = document.getElementById('girthError');
-    const girthGroup = document.getElementById('girthGroup');
-    const girthToggle = document.getElementById('girthToggle');
     const saveBtn = document.getElementById('saveBtn');
-    const showStatsBtn = document.getElementById('showStatsBtn');
-    const resetDataBtn = document.getElementById('resetDataBtn');
-    const statsBlock = document.getElementById('statsBlock');
-    const statsContent = document.getElementById('statsContent');
     const dailyEnabledChk = document.getElementById('dailyEnabled');
     const dailyTimeInput = document.getElementById('dailyTime');
     const weeklyEnabledChk = document.getElementById('weeklyEnabled');
     const weeklyDaySelect = document.getElementById('weeklyDay');
     const weeklyTimeInput = document.getElementById('weeklyTime');
     const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    const testSendBtn = document.getElementById('testSendBtn');
 
     const notifHeader = document.getElementById('notifHeader');
     const notifContent = document.getElementById('notifContent');
@@ -375,26 +261,15 @@
         return `${year}-${month}-${day}`;
     }
     function setDefaultDate() { dateInput.value = getTodayDate(); }
-    function showToast(message, duration = 2200) {
-        const existing = document.querySelector('.toast-notification');
-        if (existing) existing.remove();
+    function showToast(message) {
         const toast = document.createElement('div');
         toast.className = 'toast-notification';
         toast.innerText = message;
         document.body.appendChild(toast);
-        setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(-50%) scale(1)'; }, 10);
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(-50%) scale(0.9)';
-            setTimeout(() => { if (toast.parentNode) toast.remove(); }, 200);
-        }, duration);
+        setTimeout(() => { toast.style.opacity = '1'; }, 10);
+        setTimeout(() => { toast.remove(); }, 2200);
     }
-    function clearWeightError() { weightErrorDiv.innerText = ''; }
-    function clearGirthError() { if(girthErrorDiv) girthErrorDiv.innerText = ''; }
-    function showWeightError(msg) { weightErrorDiv.innerText = msg; }
-    function showGirthError(msg) { if(girthErrorDiv) girthErrorDiv.innerText = msg; }
     function isValidWeight(w) { return !isNaN(w) && w >= 20 && w <= 300; }
-    function isValidGirth(g) { return !isNaN(g) && g >= 30 && g <= 300; }
 
     function loadFromCloud(key, callback) {
         if (!window.Telegram?.WebApp?.CloudStorage) return callback(null);
@@ -410,9 +285,7 @@
 
     function loadAllData() {
         loadFromCloud(STORAGE_KEY, (log) => {
-            if (log) currentWeightLog = log.map(entry => ({ ...entry, girth: entry.girth !== undefined ? entry.girth : null }));
-            else currentWeightLog = [];
-            if (statsBlock.style.display !== 'none') renderStatistics();
+            currentWeightLog = log || [];
         });
         loadFromCloud(NOTIF_KEY, (settings) => {
             if (settings) {
@@ -424,31 +297,20 @@
                 weeklyTimeInput.value = notifSettings.weeklyTime || "19:00";
             }
         });
-        loadFromCloud(GIRTH_MODE_KEY, (mode) => {
-            girthMode = mode === true;
-            girthToggle.checked = girthMode;
-            girthGroup.style.display = girthMode ? 'block' : 'none';
-            if (statsBlock.style.display !== 'none') renderStatistics();
-        });
     }
 
-    function addOrUpdateWeight(date, weight, girth = null) {
+    function addOrUpdateWeight(date, weight) {
         let log = [...currentWeightLog];
         const idx = log.findIndex(e => e.date === date);
-        if (idx !== -1) {
-            let msg = `Запись за ${date} уже существует (${log[idx].weight} кг)`;
-            if (log[idx].girth) msg += `, охват ${log[idx].girth} см`;
-            if (!confirm(`${msg}. Перезаписать?`)) return false;
-        }
-        const newEntry = { date, weight, girth: (girth !== null && !isNaN(girth) && girth !== '') ? parseFloat(girth) : null };
+        if (idx !== -1 && !confirm(`Запись за ${date} уже существует (${log[idx].weight} кг). Перезаписать?`)) return false;
+        const newEntry = { date, weight };
         if (idx !== -1) log[idx] = newEntry;
         else log.push(newEntry);
         saveToCloud(STORAGE_KEY, log, (ok) => {
             if (ok) {
                 currentWeightLog = log;
-                showToast("🎉 Данные сохранены!");
-                refreshStatisticsIfVisible();
-                syncToBackend({ type: 'weight', date, weight, girth: newEntry.girth });
+                showToast("🎉 Вес сохранён (тест)");
+                syncToBackend({ type: 'weight', date, weight });
             } else showToast("Ошибка сохранения");
         });
         return true;
@@ -459,7 +321,7 @@
         const tg = window.Telegram?.WebApp;
         const chatId = tg?.initDataUnsafe?.user?.id;
         if (!chatId) {
-            console.log("syncToBackend: нет chat_id");
+            console.log("Нет chat_id");
             return;
         }
         const fullPayload = { chat_id: chatId, ...payload };
@@ -470,12 +332,12 @@
                 body: JSON.stringify(fullPayload)
             });
             if (response.ok) {
-                console.log("syncToBackend: успешно отправлено");
+                console.log("Отправлено на сервер");
             } else {
-                console.warn("syncToBackend: сервер вернул", response.status);
+                console.warn("Ошибка сервера", response.status);
             }
         } catch(e) {
-            console.warn("syncToBackend: ошибка отправки", e);
+            console.warn("Ошибка отправки", e);
         }
     }
 
@@ -490,159 +352,19 @@
         saveToCloud(NOTIF_KEY, settings, (ok) => {
             if (ok) {
                 notifSettings = settings;
-                showToast("Настройки уведомлений сохранены");
+                showToast("Настройки сохранены локально");
                 syncToBackend({ type: 'settings', settings: settings });
             } else {
-                showToast("Ошибка сохранения настроек локально");
+                showToast("Ошибка сохранения локально");
             }
         });
     }
 
-    function saveGirthMode(enabled) {
-        girthMode = enabled;
-        saveToCloud(GIRTH_MODE_KEY, girthMode);
-        girthGroup.style.display = girthMode ? 'block' : 'none';
-        if (!girthMode) {
-            clearGirthError();
-            if (girthInput) girthInput.value = '';
-        }
-        if (statsBlock.style.display !== 'none') renderStatistics();
-    }
-
-    function refreshStatisticsIfVisible() {
-        if (statsBlock.style.display !== 'none') renderStatistics();
-    }
-
-    function formatDateForChart(dateStr) {
-        const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-        const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return dateStr;
-        return `${date.getDate()}.${months[date.getMonth()]}`;
-    }
-
-    function getWeightYScale(data) {
-        const weights = data.map(d => d.weight).filter(w => w !== null && !isNaN(w));
-        if (weights.length === 0) return { min: 60, max: 100, stepSize: 1 };
-        let minWeight = Math.min(...weights);
-        let maxWeight = Math.max(...weights);
-        return { min: Math.floor(minWeight - 5), max: Math.ceil(maxWeight + 5), stepSize: 1 };
-    }
-
-    function getGirthYScale(data) {
-        const girths = data.map(d => d.girth).filter(g => g !== null && !isNaN(g));
-        if (girths.length === 0) return { min: 50, max: 150, stepSize: 1 };
-        let minGirth = Math.min(...girths);
-        let maxGirth = Math.max(...girths);
-        return { min: Math.floor(minGirth - 5), max: Math.ceil(maxGirth + 5), stepSize: 1 };
-    }
-
-    function renderStatistics() {
-        const sorted = [...currentWeightLog].sort((a,b)=>a.date.localeCompare(b.date));
-        if (sorted.length === 0) {
-            statsContent.innerHTML = `<div class="no-data-message">📭 Нет данных. Добавьте первый вес!</div>`;
-            if (weightChart) { weightChart.destroy(); weightChart = null; }
-            if (girthChart) { girthChart.destroy(); girthChart = null; }
-            return;
-        }
-
-        let html = `<table class="weight-table"><thead><tr><th>📅 Дата</th><th>⚖️ Вес (кг)</th>`;
-        if (girthMode) html += `<th>📏 Охват (см)</th>`;
-        html += `</tr></thead><tbody>`;
-        for (let e of sorted) {
-            html += `<tr><td>${e.date}</td><td>${e.weight.toFixed(1)} кг</td>`;
-            if (girthMode) {
-                let girthText = (e.girth !== null && e.girth !== undefined) ? e.girth.toFixed(1) + ' см' : '—';
-                html += `<td>${girthText}</td>`;
-            }
-            html += `</tr>`;
-        }
-        html += `</tbody></table>`;
-        html += `<div class="chart-container"><canvas id="weightChartCanvas"></canvas></div>`;
-        if (girthMode) {
-            html += `<div class="girth-chart-container"><canvas id="girthChartCanvas"></canvas></div>`;
-        } else {
-            html += `<div class="girth-chart-container" style="display: none;"></div>`;
-        }
-        statsContent.innerHTML = html;
-
-        const weightCtx = document.getElementById('weightChartCanvas').getContext('2d');
-        if (weightChart) weightChart.destroy();
-        const weightLabels = sorted.map(e => formatDateForChart(e.date));
-        const weightData = sorted.map(e => e.weight);
-        const weightScale = getWeightYScale(sorted);
-        weightChart = new Chart(weightCtx, {
-            type: 'line',
-            data: { labels: weightLabels, datasets: [{ label:'Вес (кг)', data: weightData, borderColor:'#6c5ce7', backgroundColor:'rgba(108,92,231,0.05)', borderWidth:3, pointRadius:4, tension:0.2, fill:true }] },
-            options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { labels: { color:'#eee' } } }, scales: { x: { ticks: { color:'#ccc', maxRotation: 45, minRotation: 45 } }, y: { ticks: { color:'#ccc', stepSize: weightScale.stepSize, callback: (val) => Number.isInteger(val) ? val : '' }, min: weightScale.min, max: weightScale.max } } }
-        });
-
-        if (girthMode) {
-            const girthCtx = document.getElementById('girthChartCanvas');
-            if (girthCtx) {
-                const ctx = girthCtx.getContext('2d');
-                if (girthChart) girthChart.destroy();
-                const girthEntries = sorted.filter(e => e.girth !== null && !isNaN(e.girth));
-                if (girthEntries.length === 0) {
-                    const container = document.querySelector('.girth-chart-container');
-                    if (container) container.innerHTML = `<div class="no-data-message" style="height:260px; display:flex; align-items:center; justify-content:center;">📏 Нет данных об охвате</div>`;
-                } else {
-                    const girthLabels = girthEntries.map(e => formatDateForChart(e.date));
-                    const girthData = girthEntries.map(e => e.girth);
-                    const girthScale = getGirthYScale(girthEntries);
-                    girthChart = new Chart(ctx, {
-                        type: 'line',
-                        data: { labels: girthLabels, datasets: [{ label:'Охват (см)', data: girthData, borderColor:'#e84393', backgroundColor:'rgba(232,67,147,0.05)', borderWidth:3, pointRadius:4, tension:0.2, fill:true }] },
-                        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { labels: { color:'#eee' } } }, scales: { x: { ticks: { color:'#ccc', maxRotation: 45, minRotation: 45 } }, y: { ticks: { color:'#ccc', stepSize: girthScale.stepSize, callback: (val) => Number.isInteger(val) ? val : '' }, min: girthScale.min, max: girthScale.max } } }
-                    });
-                }
-            }
-        } else if (girthChart) { girthChart.destroy(); girthChart = null; }
-    }
-
-    function resetAllData() {
-        if (!confirm("Удалить все записи о весе и охватах?")) return;
-        saveToCloud(STORAGE_KEY, [], (ok) => {
-            if (ok) { currentWeightLog = []; showToast("Все данные удалены"); refreshStatisticsIfVisible(); syncToBackend({ type: 'reset' }); }
-        });
-    }
-
-    function handleSaveWeight() {
-        clearWeightError(); clearGirthError();
-        let raw = weightInput.value.trim();
-        if (raw === "") { showWeightError("Введите вес"); return; }
-        raw = raw.replace(',', '.');
-        const w = parseFloat(raw);
-        if (!isValidWeight(w)) { showWeightError("Вес от 20 до 300 кг"); return; }
-        const date = dateInput.value;
-        if (!date) { showWeightError("Выберите дату"); return; }
-        let girth = null;
-        if (girthMode) {
-            let rawGirth = girthInput.value.trim();
-            if (rawGirth !== "") {
-                rawGirth = rawGirth.replace(',', '.');
-                const g = parseFloat(rawGirth);
-                if (!isValidGirth(g)) { showGirthError("Охват от 30 до 300 см"); return; }
-                girth = g;
-            }
-        }
-        if (addOrUpdateWeight(date, w, girth)) {
-            weightInput.value = '';
-            if (girthInput) girthInput.value = '';
-            setDefaultDate();
-        }
-    }
-
-    function handleShowStats() {
-        statsBlock.style.display = 'block';
-        renderStatistics();
-    }
-
-    // Тестовая отправка
     function testSend() {
         const tg = Telegram.WebApp;
         const chatId = tg?.initDataUnsafe?.user?.id;
         if (!chatId) {
-            alert("❌ Нет chat_id. Убедитесь, что открыли приложение через бота в Telegram, а не локально.");
+            alert("❌ Нет chat_id. Откройте приложение через бота в Telegram.");
             return;
         }
         const testPayload = {
@@ -657,34 +379,37 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ chat_id: chatId, type: 'settings', settings: testPayload })
         })
-        .then(response => response.text())
-        .then(text => {
-            alert("✅ Успешно отправлено!\nСтатус: " + response.status + "\nОтвет: " + text);
-            // после успеха проверить /debug в браузере
+        .then(response => response.text().then(text => ({ status: response.status, text })))
+        .then(({ status, text }) => {
+            alert("✅ Успешно!\nСтатус: " + status + "\nОтвет: " + text);
         })
         .catch(err => {
-            alert("❌ Ошибка отправки: " + err.message);
+            alert("❌ Ошибка: " + err.message);
         });
+    }
+
+    function handleSaveWeight() {
+        let raw = weightInput.value.trim();
+        if (raw === "") { weightErrorDiv.innerText = "Введите вес"; return; }
+        raw = raw.replace(',', '.');
+        const w = parseFloat(raw);
+        if (!isValidWeight(w)) { weightErrorDiv.innerText = "Вес от 20 до 300 кг"; return; }
+        const date = dateInput.value;
+        if (!date) { weightErrorDiv.innerText = "Выберите дату"; return; }
+        if (addOrUpdateWeight(date, w)) {
+            weightInput.value = '';
+            setDefaultDate();
+        }
     }
 
     function init() {
         setDefaultDate();
         saveBtn.onclick = handleSaveWeight;
-        showStatsBtn.onclick = handleShowStats;
-        resetDataBtn.onclick = resetAllData;
         saveSettingsBtn.onclick = saveNotificationSettings;
-        weightInput.oninput = clearWeightError;
-        if (girthInput) girthInput.oninput = clearGirthError;
-        weightInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSaveWeight(); });
-        if (girthInput) girthInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSaveWeight(); });
-        girthToggle.addEventListener('change', (e) => { saveGirthMode(e.target.checked); });
-        document.getElementById('testSendBtn').onclick = testSend;
+        testSendBtn.onclick = testSend;
         if (window.Telegram?.WebApp) {
             const tg = Telegram.WebApp;
             tg.expand();
-            tg.enableClosingConfirmation();
-            tg.setHeaderColor('#0f0f12');
-            tg.setBackgroundColor('#0f0f12');
         }
         loadAllData();
         isExpanded = false;
