@@ -75,6 +75,11 @@
             width: 100%;
             margin-top: 16px;
         }
+        .urgent-btn {
+            background-color: #e84393;
+            width: 100%;
+            margin-top: 16px;
+        }
         .toast-notification {
             position: fixed;
             bottom: 30px;
@@ -214,6 +219,7 @@
     </div>
 
     <button id="testSendBtn" class="test-btn">🔍 Тест отправки настроек (10:17 ежедневно)</button>
+    <button id="instantNotifyBtn" class="urgent-btn">🚀 Отправить тестовое уведомление СЕЙЧАС</button>
 </div>
 
 <script>
@@ -235,6 +241,7 @@
     const weeklyTimeInput = document.getElementById('weeklyTime');
     const saveSettingsBtn = document.getElementById('saveSettingsBtn');
     const testSendBtn = document.getElementById('testSendBtn');
+    const instantNotifyBtn = document.getElementById('instantNotifyBtn');
 
     const notifHeader = document.getElementById('notifHeader');
     const notifContent = document.getElementById('notifContent');
@@ -381,7 +388,25 @@
         })
         .then(response => response.text().then(text => ({ status: response.status, text })))
         .then(({ status, text }) => {
-            alert("✅ Успешно!\nСтатус: " + status + "\nОтвет: " + text);
+            alert("✅ Настройки отправлены!\nСтатус: " + status + "\nОтвет: " + text);
+        })
+        .catch(err => {
+            alert("❌ Ошибка: " + err.message);
+        });
+    }
+
+    function sendInstantNotification() {
+        const tg = Telegram.WebApp;
+        const chatId = tg?.initDataUnsafe?.user?.id;
+        if (!chatId) {
+            alert("❌ Нет chat_id. Откройте приложение через бота в Telegram.");
+            return;
+        }
+        // Вызываем эндпоинт /test_send на сервере
+        fetch(BACKEND_URL + "/test_send?chat_id=" + encodeURIComponent(chatId))
+        .then(response => response.text())
+        .then(text => {
+            alert("✅ Сервер ответил: " + text);
         })
         .catch(err => {
             alert("❌ Ошибка: " + err.message);
@@ -407,6 +432,7 @@
         saveBtn.onclick = handleSaveWeight;
         saveSettingsBtn.onclick = saveNotificationSettings;
         testSendBtn.onclick = testSend;
+        instantNotifyBtn.onclick = sendInstantNotification;
         if (window.Telegram?.WebApp) {
             const tg = Telegram.WebApp;
             tg.expand();
