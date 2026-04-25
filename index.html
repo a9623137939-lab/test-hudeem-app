@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>Тест Худеем — уведомления</title>
+    <title>Контроль веса — Telegram Mini App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -22,6 +24,14 @@
             margin-bottom: 20px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.3);
         }
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
         h1 {
             font-size: 28px;
             font-weight: 600;
@@ -29,8 +39,37 @@
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            margin-bottom: 8px;
+            margin: 0;
         }
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: #2c2c34;
+            padding: 6px 12px;
+            border-radius: 40px;
+        }
+        .toggle-switch span {
+            font-size: 14px;
+            color: #cdcddf;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #3a3a44; transition: 0.2s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 20px; width: 20px; left: 2px; bottom: 2px;
+            background-color: white; transition: 0.2s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #6c5ce7; }
+        input:checked + .slider:before { transform: translateX(24px); }
         .sub {
             color: #a0a0b0;
             font-size: 14px;
@@ -46,7 +85,7 @@
             margin-bottom: 8px;
             color: #cdcddf;
         }
-        input {
+        input, select {
             width: 100%;
             background-color: #2c2c34;
             border: 1px solid #3a3a44;
@@ -56,6 +95,8 @@
             color: #ffffff;
             outline: none;
         }
+        input:focus, select:focus { border-color: #6c5ce7; box-shadow: 0 0 0 2px rgba(108,92,231,0.3); }
+        .error-msg { color: #ff6b6b; font-size: 13px; margin-top: 6px; padding-left: 8px; }
         .btn-group, .flex-buttons { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
         button {
             background-color: #2c2c34;
@@ -68,18 +109,49 @@
             cursor: pointer;
             flex: 1 0 auto;
         }
-        .btn-primary { background-color: #6c5ce7; color: white; }
+        .btn-primary { background-color: #6c5ce7; color: white; box-shadow: 0 2px 6px rgba(108,92,231,0.3); }
+        .btn-primary:hover { background-color: #5f4fdb; transform: scale(0.98); }
         .btn-secondary { background-color: #2c2c34; border: 1px solid #4a4a56; }
-        .test-btn {
-            background-color: #6c5ce7;
-            width: 100%;
-            margin-top: 16px;
+        .btn-secondary:hover { background-color: #3a3a44; }
+        .btn-danger { background-color: #3a2a2f; border: 1px solid #8a4a5a; color: #ffaaaa; }
+        .stats-container {
+            background-color: #1e1e24;
+            border-radius: 24px;
+            padding: 20px;
+            margin-top: 8px;
         }
-        .urgent-btn {
-            background-color: #e84393;
-            width: 100%;
-            margin-top: 16px;
+        .stats-title { font-size: 20px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+        .no-data-message {
+            background-color: #2a2a32;
+            border-radius: 20px;
+            padding: 32px 20px;
+            text-align: center;
+            color: #aaaaaa;
         }
+        .weight-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 28px;
+            border-radius: 18px;
+            overflow: hidden;
+            font-size: 14px;
+        }
+        .weight-table th, .weight-table td {
+            text-align: center;
+            padding: 10px 8px;
+            border-bottom: 1px solid #c0d4e0;
+        }
+        .weight-table th {
+            background-color: #d4eaf3;
+            color: #1e1e24;
+            font-size: 14px;
+        }
+        .weight-table td {
+            background-color: #ffffffcc;
+            color: #1e1e24;
+        }
+        .chart-container { margin-top: 12px; height: 260px; width: 100%; }
+        .girth-chart-container { margin-top: 28px; height: 260px; width: 100%; }
         .toast-notification {
             position: fixed;
             bottom: 30px;
@@ -92,14 +164,19 @@
             color: #f0f0f0;
             font-weight: 500;
             font-size: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
             z-index: 1000;
             opacity: 0;
-            transition: opacity 0.2s ease;
+            transition: opacity 0.2s ease, transform 0.2s ease;
             pointer-events: none;
             white-space: nowrap;
         }
         @media (max-width: 500px) {
-            .toast-notification { white-space: normal; text-align: center; max-width: 85%; }
+            .toast-notification { white-space: normal; text-align: center; max-width: 85%; border-radius: 28px; }
+            body { padding: 16px 12px 32px; }
+            button { padding: 10px 14px; }
+            .header-row { flex-direction: column; align-items: flex-start; }
+            .weight-table th, .weight-table td { font-size: 12px; padding: 6px 4px; }
         }
         .collapsible-header {
             display: flex;
@@ -118,6 +195,7 @@
         .arrow {
             font-size: 24px;
             transition: transform 0.2s ease;
+            user-select: none;
         }
         .arrow.up { transform: rotate(180deg); }
         .collapsible-content {
@@ -139,37 +217,121 @@
             flex-wrap: wrap;
             gap: 12px;
         }
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 48px;
-            height: 24px;
-        }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #3a3a44; transition: 0.2s; border-radius: 24px;
-        }
-        .slider:before {
-            position: absolute; content: ""; height: 20px; width: 20px; left: 2px; bottom: 2px;
-            background-color: white; transition: 0.2s; border-radius: 50%;
-        }
-        input:checked + .slider { background-color: #6c5ce7; }
-        input:checked + .slider:before { transform: translateX(24px); }
+        .settings-row label { margin-bottom: 0; }
         .time-select, .weekday-select {
             background-color: #2c2c34;
             border-radius: 16px;
             padding: 10px;
-            border: 1px solid #3a3a44;
+        }
+        .girth-field { transition: all 0.2s ease; }
+
+        /* Модальные окна : отчёт и новости */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #e6f7ff;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80%;
+            overflow-y: auto;
+            padding: 20px;
+            color: #1e1e24;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 12px;
+            right: 20px;
+            font-size: 28px;
+            cursor: pointer;
+            color: #1e1e24;
+        }
+        .weekly-summary-text {
+            background-color: #ffffffbb;
+            backdrop-filter: blur(4px);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 16px;
+            font-size: 16px;
+            text-align: center;
+            color: #1e1e24;
+        }
+        .weekly-summary-text.success {
+            background-color: #d4f1f9;
+        }
+        .share-btn {
+            background-color: #6c5ce7;
+            margin: 16px auto 0;
+            display: block;
+            width: auto;
+            min-width: 180px;
+            padding: 8px 16px;
+            font-size: 14px;
+            text-align: center;
             color: white;
+            border-radius: 40px;
+        }
+        #reportCard {
+            background-color: #e6f7ff;
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 10px;
+        }
+        .big-number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1e6f5c;
+        }
+        .update-text h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: #1e6f5c;
+            text-align: center;
+        }
+        .update-text ul {
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+        .update-text li {
+            margin-bottom: 8px;
+        }
+        .update-btn {
+            background-color: #6c5ce7;
+            margin-top: 20px;
+            width: 100%;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 10px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 <div class="app-container">
     <div class="card">
-        <h1>🧪 Тест Худеем</h1>
-        <div class="sub">Проверка уведомлений (только тест)</div>
+        <div class="header-row">
+            <h1>⚖️ Контроль веса</h1>
+            <div class="toggle-switch">
+                <span>Замер охвата</span>
+                <label class="switch">
+                    <input type="checkbox" id="girthToggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+        <div class="sub">Записывайте прогресс — стройте график</div>
         <div class="form-group">
             <label>📆 Дата</label>
             <input type="date" id="dateInput">
@@ -179,14 +341,19 @@
             <input type="number" id="weightInput" step="0.1" placeholder="например, 72.5">
             <div id="weightError" class="error-msg"></div>
         </div>
+        <div class="form-group girth-field" id="girthGroup" style="display: none;">
+            <label>📏 Охват (см)</label>
+            <input type="number" id="girthInput" step="0.1" placeholder="например, 80.0">
+            <div id="girthError" class="error-msg"></div>
+        </div>
         <div class="btn-group">
-            <button id="saveBtn" class="btn-primary">💾 Сохранить вес (тест)</button>
+            <button id="saveBtn" class="btn-primary">💾 Сохранить вес</button>
         </div>
     </div>
 
     <div class="card">
         <div class="collapsible-header" id="notifHeader">
-            <div class="title"><span>🔔</span> Настройка уведомлений (тест)</div>
+            <div class="title"><span>🔔</span> Настройка уведомлений</div>
             <span class="arrow" id="headerArrow">▼</span>
         </div>
         <div class="collapsible-content" id="notifContent">
@@ -218,35 +385,99 @@
         </div>
     </div>
 
-    <button id="testSendBtn" class="test-btn">🔍 Тест отправки настроек (10:17 ежедневно)</button>
-    <button id="instantNotifyBtn" class="urgent-btn">🚀 Отправить тестовое уведомление СЕЙЧАС</button>
+    <div class="flex-buttons">
+        <button id="showStatsBtn" class="btn-secondary">📊 Показать статистику</button>
+        <button id="resetDataBtn" class="btn-danger">🗑️ Сбросить все данные</button>
+        <button id="weeklyReportBtn" class="btn-secondary" style="background-color:#2c2c34;">📅 Еженедельный отчёт</button>
+    </div>
+
+    <div id="statsBlock" class="stats-container" style="display: none;">
+        <div class="stats-title">📈 История и графики</div>
+        <div id="statsContent"></div>
+    </div>
+</div>
+
+<!-- Модальное окно еженедельного отчёта -->
+<div id="weeklyModal" class="modal">
+    <div class="modal-content">
+        <span class="modal-close" id="modalClose">&times;</span>
+        <div id="reportCard">
+            <div id="weeklyReportContent"></div>
+        </div>
+        <button id="shareReportBtn" class="share-btn" style="display: none;">📤 Поделиться результатом</button>
+    </div>
+</div>
+
+<!-- Модальное окно новости об обновлении -->
+<div id="updateModal" class="modal">
+    <div class="modal-content">
+        <span class="modal-close" id="updateModalClose">&times;</span>
+        <div class="update-text">
+            <h2>✨ Что нового в Худеем_bot?</h2>
+            <ul>
+                <li>📅 <strong>Еженедельный отчёт</strong> — после воскресного замера вы увидите итоги недели. Достижениями можно делиться прямо из приложения.</li>
+                <li>🔔 <strong>Уведомления</strong> — настраивайте удобное время для напоминаний о замерах и еженедельных сводках.</li>
+                <li>🐞 <strong>Исправление ошибок</strong> — спасибо за ваши отзывы! ❤️</li>
+            </ul>
+        </div>
+        <button id="closeUpdateBtn" class="update-btn">Спасибо. Больше не показывать</button>
+    </div>
 </div>
 
 <script>
-    const BACKEND_URL = "https://test-hudeem-bot.onrender.com";
-    const STORAGE_KEY = "weightLogTest";
-    const NOTIF_KEY = "notifSettingsTest";
+    // ---------- КОНФИГУРАЦИЯ ОБНОВЛЕНИЯ ----------
+    const UPDATE_VERSION = "2025-04-25-v1";   // меняйте при каждом новом тексте
+    const SEEN_UPDATE_KEY = "notifUpdateSeen";
 
+    // ---------- ОСНОВНАЯ КОНФИГУРАЦИЯ ----------
+    const BACKEND_URL = "https://weight-bot-fjvu.onrender.com";
+    const STORAGE_KEY = "weightLog";
+    const NOTIF_KEY = "notifSettings";
+    const GIRTH_MODE_KEY = "girthMode";
+
+    let weightChart = null;
+    let girthChart = null;
     let currentWeightLog = [];
     let notifSettings = { dailyEnabled: false, dailyTime: "19:00", weeklyEnabled: false, weeklyDay: 6, weeklyTime: "19:00" };
+    let girthMode = false;
 
+    // DOM элементы
     const dateInput = document.getElementById('dateInput');
     const weightInput = document.getElementById('weightInput');
     const weightErrorDiv = document.getElementById('weightError');
+    const girthInput = document.getElementById('girthInput');
+    const girthErrorDiv = document.getElementById('girthError');
+    const girthGroup = document.getElementById('girthGroup');
+    const girthToggle = document.getElementById('girthToggle');
     const saveBtn = document.getElementById('saveBtn');
+    const showStatsBtn = document.getElementById('showStatsBtn');
+    const resetDataBtn = document.getElementById('resetDataBtn');
+    const statsBlock = document.getElementById('statsBlock');
+    const statsContent = document.getElementById('statsContent');
     const dailyEnabledChk = document.getElementById('dailyEnabled');
     const dailyTimeInput = document.getElementById('dailyTime');
     const weeklyEnabledChk = document.getElementById('weeklyEnabled');
     const weeklyDaySelect = document.getElementById('weeklyDay');
     const weeklyTimeInput = document.getElementById('weeklyTime');
     const saveSettingsBtn = document.getElementById('saveSettingsBtn');
-    const testSendBtn = document.getElementById('testSendBtn');
-    const instantNotifyBtn = document.getElementById('instantNotifyBtn');
+    const weeklyReportBtn = document.getElementById('weeklyReportBtn');
+    const modal = document.getElementById('weeklyModal');
+    const modalClose = document.getElementById('modalClose');
+    const weeklyReportContent = document.getElementById('weeklyReportContent');
+    const shareReportBtn = document.getElementById('shareReportBtn');
+
+    // Элементы модального окна новости
+    const updateModal = document.getElementById('updateModal');
+    const updateModalClose = document.getElementById('updateModalClose');
+    const closeUpdateBtn = document.getElementById('closeUpdateBtn');
 
     const notifHeader = document.getElementById('notifHeader');
     const notifContent = document.getElementById('notifContent');
     const headerArrow = document.getElementById('headerArrow');
     let isExpanded = false;
+
+    modalClose.onclick = () => { modal.style.display = 'none'; shareReportBtn.style.display = 'none'; };
+    window.onclick = (event) => { if (event.target === modal) { modal.style.display = 'none'; shareReportBtn.style.display = 'none'; } };
 
     function toggleNotifications() {
         isExpanded = !isExpanded;
@@ -268,16 +499,28 @@
         return `${year}-${month}-${day}`;
     }
     function setDefaultDate() { dateInput.value = getTodayDate(); }
-    function showToast(message) {
+    function showToast(message, duration = 2200) {
+        const existing = document.querySelector('.toast-notification');
+        if (existing) existing.remove();
         const toast = document.createElement('div');
         toast.className = 'toast-notification';
         toast.innerText = message;
         document.body.appendChild(toast);
-        setTimeout(() => { toast.style.opacity = '1'; }, 10);
-        setTimeout(() => { toast.remove(); }, 2200);
+        setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(-50%) scale(1)'; }, 10);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-50%) scale(0.9)';
+            setTimeout(() => { if (toast.parentNode) toast.remove(); }, 200);
+        }, duration);
     }
+    function clearWeightError() { weightErrorDiv.innerText = ''; }
+    function clearGirthError() { if(girthErrorDiv) girthErrorDiv.innerText = ''; }
+    function showWeightError(msg) { weightErrorDiv.innerText = msg; }
+    function showGirthError(msg) { if(girthErrorDiv) girthErrorDiv.innerText = msg; }
     function isValidWeight(w) { return !isNaN(w) && w >= 20 && w <= 300; }
+    function isValidGirth(g) { return !isNaN(g) && g >= 30 && g <= 300; }
 
+    // CloudStorage
     function loadFromCloud(key, callback) {
         if (!window.Telegram?.WebApp?.CloudStorage) return callback(null);
         Telegram.WebApp.CloudStorage.getItem(key, (err, val) => {
@@ -290,9 +533,12 @@
         Telegram.WebApp.CloudStorage.setItem(key, JSON.stringify(data), (err) => callback?.(!err));
     }
 
+    // Основные функции
     function loadAllData() {
         loadFromCloud(STORAGE_KEY, (log) => {
-            currentWeightLog = log || [];
+            if (log) currentWeightLog = log;
+            else currentWeightLog = [];
+            if (statsBlock.style.display !== 'none') renderStatistics();
         });
         loadFromCloud(NOTIF_KEY, (settings) => {
             if (settings) {
@@ -304,20 +550,31 @@
                 weeklyTimeInput.value = notifSettings.weeklyTime || "19:00";
             }
         });
+        loadFromCloud(GIRTH_MODE_KEY, (mode) => {
+            girthMode = mode === true;
+            girthToggle.checked = girthMode;
+            girthGroup.style.display = girthMode ? 'block' : 'none';
+            if (statsBlock.style.display !== 'none') renderStatistics();
+        });
     }
 
-    function addOrUpdateWeight(date, weight) {
+    function addOrUpdateWeight(date, weight, girth = null) {
         let log = [...currentWeightLog];
         const idx = log.findIndex(e => e.date === date);
-        if (idx !== -1 && !confirm(`Запись за ${date} уже существует (${log[idx].weight} кг). Перезаписать?`)) return false;
-        const newEntry = { date, weight };
+        if (idx !== -1) {
+            let msg = `Запись за ${date} уже существует (${log[idx].weight} кг)`;
+            if (log[idx].girth) msg += `, охват ${log[idx].girth} см`;
+            if (!confirm(`${msg}. Перезаписать?`)) return false;
+        }
+        const newEntry = { date, weight, girth: (girth !== null && !isNaN(girth) && girth !== '') ? parseFloat(girth) : null };
         if (idx !== -1) log[idx] = newEntry;
         else log.push(newEntry);
         saveToCloud(STORAGE_KEY, log, (ok) => {
             if (ok) {
                 currentWeightLog = log;
-                showToast("🎉 Вес сохранён (тест)");
-                syncToBackend({ type: 'weight', date, weight });
+                showToast("🎉 Данные сохранены!");
+                refreshStatisticsIfVisible();
+                syncToBackend({ type: 'weight', date, weight, girth: newEntry.girth });
             } else showToast("Ошибка сохранения");
         });
         return true;
@@ -328,7 +585,7 @@
         const tg = window.Telegram?.WebApp;
         const chatId = tg?.initDataUnsafe?.user?.id;
         if (!chatId) {
-            console.log("Нет chat_id");
+            console.log("syncToBackend: нет chat_id");
             return;
         }
         const fullPayload = { chat_id: chatId, ...payload };
@@ -339,12 +596,12 @@
                 body: JSON.stringify(fullPayload)
             });
             if (response.ok) {
-                console.log("Отправлено на сервер");
+                console.log("syncToBackend: успешно отправлено");
             } else {
-                console.warn("Ошибка сервера", response.status);
+                console.warn("syncToBackend: сервер вернул", response.status);
             }
         } catch(e) {
-            console.warn("Ошибка отправки", e);
+            console.warn("syncToBackend: ошибка отправки", e);
         }
     }
 
@@ -359,88 +616,360 @@
         saveToCloud(NOTIF_KEY, settings, (ok) => {
             if (ok) {
                 notifSettings = settings;
-                showToast("Настройки сохранены локально");
+                showToast("Настройки уведомлений сохранены");
                 syncToBackend({ type: 'settings', settings: settings });
             } else {
-                showToast("Ошибка сохранения локально");
+                showToast("Ошибка сохранения настроек локально");
             }
         });
     }
 
-    function testSend() {
-        const tg = Telegram.WebApp;
-        const chatId = tg?.initDataUnsafe?.user?.id;
-        if (!chatId) {
-            alert("❌ Нет chat_id. Откройте приложение через бота в Telegram.");
-            return;
+    function saveGirthMode(enabled) {
+        girthMode = enabled;
+        saveToCloud(GIRTH_MODE_KEY, girthMode);
+        girthGroup.style.display = girthMode ? 'block' : 'none';
+        if (!girthMode) {
+            clearGirthError();
+            if (girthInput) girthInput.value = '';
         }
-        const testPayload = {
-            dailyEnabled: true,
-            dailyTime: "10:17",
-            weeklyEnabled: false,
-            weeklyDay: 4,
-            weeklyTime: "10:17"
-        };
-        fetch(BACKEND_URL + "/sync", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: chatId, type: 'settings', settings: testPayload })
-        })
-        .then(response => response.text().then(text => ({ status: response.status, text })))
-        .then(({ status, text }) => {
-            alert("✅ Настройки отправлены!\nСтатус: " + status + "\nОтвет: " + text);
-        })
-        .catch(err => {
-            alert("❌ Ошибка: " + err.message);
-        });
+        if (statsBlock.style.display !== 'none') renderStatistics();
     }
 
-    function sendInstantNotification() {
-        const tg = Telegram.WebApp;
-        const chatId = tg?.initDataUnsafe?.user?.id;
-        if (!chatId) {
-            alert("❌ Нет chat_id. Откройте приложение через бота в Telegram.");
+    function refreshStatisticsIfVisible() {
+        if (statsBlock.style.display !== 'none') renderStatistics();
+    }
+
+    function formatDateForChart(dateStr) {
+        const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return dateStr;
+        return `${date.getDate()}.${months[date.getMonth()]}`;
+    }
+
+    function getWeightYScale(data) {
+        const weights = data.map(d => d.weight).filter(w => w !== null && !isNaN(w));
+        if (weights.length === 0) return { min: 60, max: 100, stepSize: 1 };
+        let minWeight = Math.min(...weights);
+        let maxWeight = Math.max(...weights);
+        return { min: Math.floor(minWeight - 5), max: Math.ceil(maxWeight + 5), stepSize: 1 };
+    }
+
+    function getGirthYScale(data) {
+        const girths = data.map(d => d.girth).filter(g => g !== null && !isNaN(g));
+        if (girths.length === 0) return { min: 50, max: 150, stepSize: 1 };
+        let minGirth = Math.min(...girths);
+        let maxGirth = Math.max(...girths);
+        return { min: Math.floor(minGirth - 5), max: Math.ceil(maxGirth + 5), stepSize: 1 };
+    }
+
+    function renderStatistics() {
+        const sorted = [...currentWeightLog].sort((a,b)=>a.date.localeCompare(b.date));
+        if (sorted.length === 0) {
+            statsContent.innerHTML = `<div class="no-data-message">📭 Нет данных. Добавьте первый вес!</div>`;
+            if (weightChart) { weightChart.destroy(); weightChart = null; }
+            if (girthChart) { girthChart.destroy(); girthChart = null; }
             return;
         }
-        // Вызываем эндпоинт /test_send на сервере
-        fetch(BACKEND_URL + "/test_send?chat_id=" + encodeURIComponent(chatId))
-        .then(response => response.text())
-        .then(text => {
-            alert("✅ Сервер ответил: " + text);
-        })
-        .catch(err => {
-            alert("❌ Ошибка: " + err.message);
+        let html = `<table class="weight-table"><thead><tr><th>📅 Дата</th><th>⚖️ Вес (кг)</th>`;
+        if (girthMode) html += `<th>📏 Охват (см)</th>`;
+        html += `</tr></thead><tbody>`;
+        for (let e of sorted) {
+            html += `<tr>`;
+            html += `<td>${e.date}</td>`;
+            html += `<td>${e.weight.toFixed(1)} кг</td>`;
+            if (girthMode) {
+                let girthText = (e.girth !== null && e.girth !== undefined) ? e.girth.toFixed(1) + ' см' : '—';
+                html += `<td>${girthText}</td>`;
+            }
+            html += `</tr>`;
+        }
+        html += `</tbody></table>`;
+        html += `<div class="chart-container"><canvas id="weightChartCanvas"></canvas></div>`;
+        if (girthMode) {
+            html += `<div class="girth-chart-container"><canvas id="girthChartCanvas"></canvas></div>`;
+        } else {
+            html += `<div class="girth-chart-container" style="display: none;"></div>`;
+        }
+        statsContent.innerHTML = html;
+
+        const weightCtx = document.getElementById('weightChartCanvas').getContext('2d');
+        if (weightChart) weightChart.destroy();
+        const weightLabels = sorted.map(e => formatDateForChart(e.date));
+        const weightData = sorted.map(e => e.weight);
+        const weightScale = getWeightYScale(sorted);
+        weightChart = new Chart(weightCtx, {
+            type: 'line',
+            data: { labels: weightLabels, datasets: [{ label:'Вес (кг)', data: weightData, borderColor:'#6c5ce7', backgroundColor:'rgba(108,92,231,0.05)', borderWidth:3, pointRadius:4, tension:0.2, fill:true }] },
+            options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { labels: { color:'#eee' } } }, scales: { x: { ticks: { color:'#ccc', maxRotation: 45, minRotation: 45 } }, y: { ticks: { color:'#ccc', stepSize: weightScale.stepSize, callback: (val) => Number.isInteger(val) ? val : '' }, min: weightScale.min, max: weightScale.max } } }
+        });
+
+        if (girthMode) {
+            const girthCtx = document.getElementById('girthChartCanvas');
+            if (girthCtx) {
+                const ctx = girthCtx.getContext('2d');
+                if (girthChart) girthChart.destroy();
+                const girthEntries = sorted.filter(e => e.girth !== null && !isNaN(e.girth));
+                if (girthEntries.length === 0) {
+                    const container = document.querySelector('.girth-chart-container');
+                    if (container) container.innerHTML = `<div class="no-data-message" style="height:260px; display:flex; align-items:center; justify-content:center;">📏 Нет данных об охвате</div>`;
+                } else {
+                    const girthLabels = girthEntries.map(e => formatDateForChart(e.date));
+                    const girthData = girthEntries.map(e => e.girth);
+                    const girthScale = getGirthYScale(girthEntries);
+                    girthChart = new Chart(ctx, {
+                        type: 'line',
+                        data: { labels: girthLabels, datasets: [{ label:'Охват (см)', data: girthData, borderColor:'#e84393', backgroundColor:'rgba(232,67,147,0.05)', borderWidth:3, pointRadius:4, tension:0.2, fill:true }] },
+                        options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { labels: { color:'#eee' } } }, scales: { x: { ticks: { color:'#ccc', maxRotation: 45, minRotation: 45 } }, y: { ticks: { color:'#ccc', stepSize: girthScale.stepSize, callback: (val) => Number.isInteger(val) ? val : '' }, min: girthScale.min, max: girthScale.max } } }
+                    });
+                }
+            }
+        } else if (girthChart) { girthChart.destroy(); girthChart = null; }
+    }
+
+    function resetAllData() {
+        if (!confirm("Удалить все записи о весе и охватах?")) return;
+        saveToCloud(STORAGE_KEY, [], (ok) => {
+            if (ok) { currentWeightLog = []; showToast("Все данные удалены"); refreshStatisticsIfVisible(); syncToBackend({ type: 'reset' }); }
         });
     }
 
     function handleSaveWeight() {
+        clearWeightError(); clearGirthError();
         let raw = weightInput.value.trim();
-        if (raw === "") { weightErrorDiv.innerText = "Введите вес"; return; }
+        if (raw === "") { showWeightError("Введите вес"); return; }
         raw = raw.replace(',', '.');
         const w = parseFloat(raw);
-        if (!isValidWeight(w)) { weightErrorDiv.innerText = "Вес от 20 до 300 кг"; return; }
+        if (!isValidWeight(w)) { showWeightError("Вес от 20 до 300 кг"); return; }
         const date = dateInput.value;
-        if (!date) { weightErrorDiv.innerText = "Выберите дату"; return; }
-        if (addOrUpdateWeight(date, w)) {
+        if (!date) { showWeightError("Выберите дату"); return; }
+        let girth = null;
+        if (girthMode) {
+            let rawGirth = girthInput.value.trim();
+            if (rawGirth !== "") {
+                rawGirth = rawGirth.replace(',', '.');
+                const g = parseFloat(rawGirth);
+                if (!isValidGirth(g)) { showGirthError("Охват от 30 до 300 см"); return; }
+                girth = g;
+            }
+        }
+        if (addOrUpdateWeight(date, w, girth)) {
             weightInput.value = '';
+            if (girthInput) girthInput.value = '';
             setDefaultDate();
         }
     }
 
+    function handleShowStats() {
+        statsBlock.style.display = 'block';
+        renderStatistics();
+    }
+
+    // ---------- Еженедельный отчёт ----------
+    function getReportWeek() {
+        const now = new Date();
+        const currentHour = now.getHours();
+        const isSunday = now.getDay() === 0;
+        const isAfter2200 = (currentHour >= 22);
+        let endDate = new Date(now);
+        if (isSunday && isAfter2200) {
+            endDate = new Date(now);
+        } else {
+            endDate = new Date(now);
+            endDate.setDate(now.getDate() - now.getDay());
+            if (now.getDay() === 0 && !isAfter2200) {
+                endDate.setDate(endDate.getDate() - 7);
+            }
+        }
+        const startDate = new Date(endDate);
+        startDate.setDate(endDate.getDate() - 6);
+        startDate.setHours(0,0,0,0);
+        endDate.setHours(23,59,59,999);
+        const options = { day: 'numeric', month: 'long' };
+        const endDateFormatted = endDate.toLocaleDateString('ru-RU', options);
+        return { startDate, endDate, endDateFormatted };
+    }
+
+    function updateWeeklyButtonDate() {
+        const { endDateFormatted } = getReportWeek();
+        weeklyReportBtn.textContent = `📅 Еженедельный отчёт за ${endDateFormatted}`;
+    }
+
+    function generateWeeklyReport() {
+        if (currentWeightLog.length === 0) {
+            weeklyReportContent.innerHTML = `<div class="no-data-message">Нет данных для отчёта</div>`;
+            shareReportBtn.style.display = 'none';
+            modal.style.display = 'flex';
+            return;
+        }
+        const { startDate, endDate, endDateFormatted } = getReportWeek();
+        const weekEntries = currentWeightLog.filter(entry => {
+            const entryDate = new Date(entry.date);
+            return entryDate >= startDate && entryDate <= endDate;
+        }).sort((a,b) => new Date(a.date) - new Date(b.date));
+        if (weekEntries.length === 0) {
+            weeklyReportContent.innerHTML = `<div class="no-data-message">За неделю до ${endDateFormatted} нет замеров. Добавьте вес, чтобы увидеть статистику.</div>`;
+            shareReportBtn.style.display = 'none';
+            modal.style.display = 'flex';
+            return;
+        }
+
+        const requiredDayNames = ['пятница', 'суббота', 'воскресенье'];
+        const missingDays = [];
+        for (let dayName of requiredDayNames) {
+            let dayIndex;
+            switch (dayName) {
+                case 'пятница': dayIndex = 5; break;
+                case 'суббота': dayIndex = 6; break;
+                case 'воскресенье': dayIndex = 0; break;
+                default: continue;
+            }
+            const hasDay = weekEntries.some(entry => new Date(entry.date).getDay() === dayIndex);
+            if (!hasDay) missingDays.push(dayName);
+        }
+
+        let diffHtml = '';
+        if (missingDays.length > 0) {
+            diffHtml = `<div class="weekly-summary-text" style="background-color:#ffdddd;">⚠️ Ты пропустил замеры в ${missingDays.join(', ')}. Статистику сделать не получится.</div>`;
+        } else {
+            const monIdx = 1, tueIdx = 2, wedIdx = 3;
+            const getWeight = (dayIdx) => {
+                const entry = weekEntries.find(e => new Date(e.date).getDay() === dayIdx);
+                return entry ? entry.weight : null;
+            };
+            const weightsFirst = [getWeight(monIdx), getWeight(tueIdx), getWeight(wedIdx)].filter(w => w !== null);
+            let firstWeight = null;
+            if (weightsFirst.length > 0) {
+                firstWeight = Math.max(...weightsFirst);
+            } else {
+                firstWeight = weekEntries[0]?.weight;
+            }
+            const lastWeight = weekEntries[weekEntries.length-1]?.weight;
+            if (firstWeight !== null && lastWeight !== null) {
+                const diff = lastWeight - firstWeight;
+                const absDiff = Math.abs(diff).toFixed(1);
+                if (diff < 0) {
+                    diffHtml = `<div class="weekly-summary-text success">За эту неделю ты сделал мир легче 💨<br><span class="inline-text">на</span> <span class="big-number">${absDiff} кг</span><br>Поздравляю!</div>`;
+                } else if (diff > 0) {
+                    diffHtml = `<div class="weekly-summary-text">К сожалению, твой вес за эту неделю стал больше на ${absDiff} кг. Не расстраивайся, у тебя всё получится!</div>`;
+                } else {
+                    diffHtml = `<div class="weekly-summary-text">Твой вес не изменился за эту неделю. Так держать!</div>`;
+                }
+            } else {
+                diffHtml = `<div class="weekly-summary-text">Недостаточно данных для расчёта динамики.</div>`;
+            }
+        }
+
+        let tableHtml = `<table class="weight-table"><thead><tr><th>📅 Дата</th><th>⚖️ Вес (кг)</th></tr></thead><tbody>`;
+        for (let e of weekEntries) {
+            tableHtml += `<tr><td style="text-align:center">${e.date}</td><td style="text-align:center">${e.weight.toFixed(1)} кг</td></tr>`;
+        }
+        tableHtml += `</tbody></table>`;
+
+        weeklyReportContent.innerHTML = diffHtml + tableHtml;
+        shareReportBtn.style.display = 'block';
+        modal.style.display = 'flex';
+    }
+
+    async function shareReportAsImage() {
+        const element = document.getElementById('reportCard');
+        if (!element) return;
+        try {
+            element.style.backgroundColor = '#e6f7ff';
+            const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#e6f7ff' });
+            element.style.backgroundColor = '';
+            canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    showToast("Не удалось создать изображение");
+                    return;
+                }
+                const file = new File([blob], "weekly_report.png", { type: "image/png" });
+                const tg = window.Telegram?.WebApp;
+                if (tg && typeof tg.shareMessage === 'function') {
+                    if (navigator.share) {
+                        await navigator.share({
+                            title: 'Мой еженедельный отчёт',
+                            text: 'Это мой результат за неделю. Хочешь так же? Подписывайся на @Hudeem_Kolesovi_bot',
+                            files: [file]
+                        });
+                    } else {
+                        const link = document.createElement('a');
+                        link.download = 'weekly_report.png';
+                        link.href = URL.createObjectURL(blob);
+                        link.click();
+                        URL.revokeObjectURL(link.href);
+                        showToast("Скриншот сохранён в загрузки");
+                    }
+                } else if (navigator.share) {
+                    await navigator.share({
+                        title: 'Мой еженедельный отчёт',
+                        text: 'Это мой результат за неделю. Хочешь так же? Подписывайся на @Hudeem_Kolesovi_bot',
+                        files: [file]
+                    });
+                } else {
+                    const link = document.createElement('a');
+                    link.download = 'weekly_report.png';
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                    showToast("Скриншот сохранён в загрузки");
+                }
+            }, 'image/png');
+        } catch(e) {
+            console.error(e);
+            showToast("Ошибка создания скриншота");
+        }
+    }
+
+    // ---------- Логика показа обновления ----------
+    function checkAndShowUpdate() {
+        loadFromCloud(SEEN_UPDATE_KEY, (seenVersion) => {
+            if (seenVersion !== UPDATE_VERSION) {
+                updateModal.style.display = 'flex';
+            }
+        });
+    }
+
+    function closeUpdateAndRemember() {
+        saveToCloud(SEEN_UPDATE_KEY, UPDATE_VERSION, (ok) => {
+            updateModal.style.display = 'none';
+            if (!ok) showToast("Не удалось сохранить настройку, но окно закрыто");
+        });
+    }
+
+    // ---------- Инициализация ----------
     function init() {
         setDefaultDate();
         saveBtn.onclick = handleSaveWeight;
+        showStatsBtn.onclick = handleShowStats;
+        resetDataBtn.onclick = resetAllData;
         saveSettingsBtn.onclick = saveNotificationSettings;
-        testSendBtn.onclick = testSend;
-        instantNotifyBtn.onclick = sendInstantNotification;
+        weightInput.oninput = clearWeightError;
+        if (girthInput) girthInput.oninput = clearGirthError;
+        weightInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSaveWeight(); });
+        if (girthInput) girthInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSaveWeight(); });
+        girthToggle.addEventListener('change', (e) => { saveGirthMode(e.target.checked); });
         if (window.Telegram?.WebApp) {
             const tg = Telegram.WebApp;
             tg.expand();
+            tg.enableClosingConfirmation();
+            tg.setHeaderColor('#0f0f12');
+            tg.setBackgroundColor('#0f0f12');
         }
         loadAllData();
         isExpanded = false;
         notifContent.classList.remove('show');
         headerArrow.classList.remove('up');
+        updateWeeklyButtonDate();
+        weeklyReportBtn.onclick = generateWeeklyReport;
+        shareReportBtn.onclick = shareReportAsImage;
+
+        // настройка модальных окон новости
+        updateModalClose.onclick = () => { updateModal.style.display = 'none'; };
+        closeUpdateBtn.onclick = closeUpdateAndRemember;
+        window.addEventListener('click', (event) => { if (event.target === updateModal) updateModal.style.display = 'none'; });
+
+        // показать новость, если нужно
+        checkAndShowUpdate();
     }
     document.addEventListener('DOMContentLoaded', init);
 </script>
